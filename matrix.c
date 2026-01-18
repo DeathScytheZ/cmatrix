@@ -1,4 +1,5 @@
 #include <raylib.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
@@ -10,8 +11,8 @@
 #define MIN_SPPED 4
 #define MAX_SPEED 15
 #define INTERVAL 10
-#define COLOR_HEAD (Color) {180, 255, 180, 255}
-#define COLOR_BODY (Color) {0, 255, 70, 255}
+#define COLOR_HEAD_DEFAULT (Color) {180, 255, 180, 255}
+#define COLOR_BODY_DEFAULT (Color) {0, 255, 70, 255}
 
 int screenWidth;
 int screenHeight;
@@ -27,11 +28,9 @@ typedef struct Column{
 
 Column grid[MAX_GRID_SIZE];
 
-
-char GetRandomChar(){
+char GetRandomChar(){ 
     return (char) (rand() % (126 - 33) + 33);
 }
-
 
 void InitGrid(){
     columnCount = (screenWidth / FONT_SIZE) > MAX_GRID_SIZE ? MAX_GRID_SIZE : (screenWidth / FONT_SIZE );
@@ -46,10 +45,9 @@ void InitGrid(){
     }
 }
 
-int main(){
-
+int main(int argc, char* argv[]){
     SetConfigFlags(FLAG_MSAA_4X_HINT);
-    InitWindow(0, 0, "snow");
+    InitWindow(0, 0, "cmatrix");
     SetTargetFPS(60);
 
     srand(time(NULL));
@@ -60,7 +58,35 @@ int main(){
     SetWindowSize(screenWidth, screenHeight);
     ToggleFullscreen();
 
+    Color colorHead;
+    Color colorBody;
+
     Font font = LoadFont("resources/MesloLGS NF Regular.ttf");
+
+    if(argc > 1){
+        if(argc < 3){
+            fprintf(stderr, "Usage: %s -c <red|blue>\n", argv[0]);
+            exit(1);
+        }
+        if(strcmp(argv[1], "-c") == 0){
+            if (strcmp(argv[2], "red") == 0) {
+                colorHead = (Color) {255, 0, 0, 255};
+                colorBody = (Color) {255, 180, 180, 255}; 
+            }else if(strcmp(argv[2], "blue") == 0){
+                colorHead = (Color) {0, 0, 255, 255};
+                colorBody = (Color) {180, 180, 255, 255}; 
+            }else{
+                fprintf(stderr, "invalid color: %s\n", argv[2]);
+                exit(1);
+            }
+        }else{
+            fprintf(stderr, "invalid argument: %s\n", argv[1]);
+            exit(1);
+        }
+    }else{
+        colorHead = COLOR_HEAD_DEFAULT;
+        colorBody = COLOR_BODY_DEFAULT;
+    }
 
     InitGrid();
 
@@ -91,17 +117,17 @@ int main(){
             int posX = i * FONT_SIZE;
             for(int j = 0; j < grid[i].len; j++){
                 int posY = grid[i].posY - (j * FONT_SIZE);
-                Color color;
+                Color trailColor;
                 if(j == 0){
-                    color = COLOR_HEAD;
+                    trailColor = colorHead;
                 } else if(j <= 3){
-                    color = COLOR_BODY;
+                    trailColor = colorBody;
                 } else{
                     int len = (255 - 25) / grid[i].len; 
-                    unsigned char alpha = 255 - (len * j);
-                    color = (Color) {0, 120, 30, alpha};
+                    float alpha = (255 - (len * j)) / 255.0f;
+                    trailColor = ColorAlpha(colorBody, (float) alpha);
                 }
-                DrawTextCodepoint(font, grid[i].chars[j], (Vector2) {posX, posY}, FONT_SIZE, color);
+                DrawTextCodepoint(font, grid[i].chars[j], (Vector2) {posX, posY}, FONT_SIZE, trailColor);
             }
         }
         EndDrawing();
